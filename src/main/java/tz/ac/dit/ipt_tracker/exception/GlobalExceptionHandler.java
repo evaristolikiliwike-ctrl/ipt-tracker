@@ -7,6 +7,8 @@ import java.util.Map;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +19,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log =
+            LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleNotFound(
@@ -37,6 +42,18 @@ public class GlobalExceptionHandler {
 
         return buildResponse(
                 HttpStatus.CONFLICT,
+                exception.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(BusinessRuleException.class)
+    public ResponseEntity<Map<String, Object>> handleBusinessRule(
+            BusinessRuleException exception,
+            HttpServletRequest request) {
+
+        return buildResponse(
+                HttpStatus.UNPROCESSABLE_ENTITY,
                 exception.getMessage(),
                 request
         );
@@ -89,6 +106,25 @@ public class GlobalExceptionHandler {
         return buildResponse(
                 HttpStatus.CONFLICT,
                 "The request conflicts with existing data or a database constraint",
+                request
+        );
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleUnexpected(
+            Exception exception,
+            HttpServletRequest request) {
+
+        log.error(
+                "Unexpected error processing {} {}",
+                request.getMethod(),
+                request.getRequestURI(),
+                exception
+        );
+
+        return buildResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "An unexpected error occurred",
                 request
         );
     }

@@ -9,10 +9,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import tz.ac.dit.ipt_tracker.dto.AdminCreateUserRequest;
 import tz.ac.dit.ipt_tracker.dto.RegisterRequest;
 import tz.ac.dit.ipt_tracker.dto.UserResponse;
 import tz.ac.dit.ipt_tracker.entity.Role;
 import tz.ac.dit.ipt_tracker.entity.User;
+import tz.ac.dit.ipt_tracker.exception.BusinessRuleException;
 import tz.ac.dit.ipt_tracker.exception.DuplicateResourceException;
 import tz.ac.dit.ipt_tracker.exception.ResourceNotFoundException;
 import tz.ac.dit.ipt_tracker.repository.UserRepository;
@@ -69,6 +71,53 @@ public class UserService {
                 passwordEncoder.encode(request.password())
         );
         user.setRole(Role.STUDENT);
+        user.setActive(true);
+
+        User savedUser = userRepository.save(user);
+
+        return toResponse(savedUser);
+    }
+
+    public UserResponse createByAdmin(AdminCreateUserRequest request) {
+
+        Role role = request.role();
+
+        if (role != Role.INDUSTRIAL_SUPERVISOR
+                && role != Role.ACADEMIC_SUPERVISOR) {
+
+            throw new BusinessRuleException(
+                    "Admin can create only supervisor accounts through this endpoint"
+            );
+        }
+
+        String email = request.email().trim().toLowerCase();
+
+        if (userRepository.existsByEmailIgnoreCase(email)) {
+            throw new DuplicateResourceException(
+                    "Email is already registered"
+            );
+        }
+
+        String registrationNumber =
+                request.registrationNumber().trim();
+
+        if (userRepository.existsByRegistrationNumberIgnoreCase(
+                registrationNumber)) {
+
+            throw new DuplicateResourceException(
+                    "Registration number is already registered"
+            );
+        }
+
+        User user = new User();
+
+        user.setFullName(request.fullName().trim());
+        user.setRegistrationNumber(registrationNumber);
+        user.setEmail(email);
+        user.setPasswordHash(
+                passwordEncoder.encode(request.password())
+        );
+        user.setRole(role);
         user.setActive(true);
 
         User savedUser = userRepository.save(user);
